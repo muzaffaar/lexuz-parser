@@ -5,3 +5,7 @@ __pycache__/
 data/
 test-data/
 *.lock
+
+# deployment
+.env
+backups/

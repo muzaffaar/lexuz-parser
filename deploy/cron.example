@@ -1,0 +1,10 @@
+# crontab -e   (as the user that owns the checkout and is in the docker group; adjust the path)
+# The crawler itself runs continuously in its own container:  ./deploy/ctl.sh crawl
+MAILTO=""
+# Every 6 hours: load newly crawled documents, refresh lex.uz's statistics, print the coverage
+0 */6 * * *  cd /opt/yurist && ./deploy/ctl.sh daily >> /var/log/yurist-daily.log 2>&1
+# Nightly database dump, keeping 14
+30 3 * * *   cd /opt/yurist && ./deploy/backup.sh >> /var/log/yurist-backup.log 2>&1
+
+# survive a reboot (docker does not auto-start the crawler; it exits when its queue is empty)
+@reboot      cd /opt/yurist && ./deploy/ctl.sh crawl >> /var/log/yurist-crawl.log 2>&1

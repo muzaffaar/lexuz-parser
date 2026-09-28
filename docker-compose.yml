@@ -1,0 +1,160 @@
+# Production stack for the Yurist AI legal data platform.  Everything is driven by ./.env (see deploy/env.example).
+#
+#   networks   public  the crawler only: the one container with Internet access
+#              private no Internet at all: PostgreSQL, S3 store, migrate, ingest, admin (TZ: private zone)
+#              edge    the admin and the optional TLS proxy
+#   core       db, s3, migrate (one-shot), admin        -> `docker compose up -d`
+#   on demand  crawler (profile crawl), parser (profile jobs), caddy (profile proxy)
+name: yurist
+
+x-backend-env: &backend-env
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?set DJANGO_SECRET_KEY in .env}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+  DJANGO_HTTPS: ${DJANGO_HTTPS:-0}
+  DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+  DB_NAME: ${POSTGRES_DB:-yurist}
+  DB_HOST: db
+  DB_PORT: "5432"
+  OBJECT_STORE_BACKEND: s3
+  OBJECT_STORE_BUCKET: ${S3_BUCKET:-yurist-raw}
+  OBJECT_STORE_ENDPOINT_URL: ${S3_ENDPOINT_URL:-http://s3:8333}
+  OBJECT_STORE_REGION: ${S3_REGION:-us-east-1}
+  OBJECT_STORE_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in .env}
+  OBJECT_STORE_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}
+
+x-backend: &backend
+  build: ./backend
+  image: yurist-backend:latest
+  restart: "no"
+
+services:
+  db:
+    image: pgvector/pgvector:pg17  # production should pin an image digest (TZ section 8); see DEPLOY.md
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-yurist}
+      OWNER_DB_PASSWORD: ${OWNER_DB_PASSWORD:?set OWNER_DB_PASSWORD in .env}
+      PARSER_DB_PASSWORD: ${PARSER_DB_PASSWORD:?set PARSER_DB_PASSWORD in .env}
+      API_DB_PASSWORD: ${API_DB_PASSWORD:?set API_DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/deploy/db/init/00-roles.sql:/docker-entrypoint-initdb.d/00-roles.sql:ro
+      - ./deploy/db/10-logins.sh:/docker-entrypoint-initdb.d/10-logins.sh:ro
+    shm_size: 256mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    networks: [private]
+
+  # Bundled S3-compatible store for the raw snapshots (SeaweedFS). Use AWS S3 or any other S3 API instead by pointing
+  # S3_ENDPOINT_URL / keys at it and removing this service (see DEPLOY.md).
+  s3:
+    image: chrislusf/seaweedfs:4.47
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "/entrypoint-s3.sh"]
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in .env}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY in .env}
+      S3_BUCKET: ${S3_BUCKET:-yurist-raw}
+    volumes:
+      - s3data:/data
+      - ./deploy/s3/entrypoint.sh:/entrypoint-s3.sh:ro
+    networks: [private]
+
+  migrate:
+    <<: *backend
+    command: ["migrate", "--noinput"]
+    environment:
+      <<: *backend-env
+      DJANGO_SETTINGS_MODULE: config.settings.ops  # includes the admin's own tables (users, sessions)
+      DB_USER: yurist_owner
+      DB_PASSWORD: ${OWNER_DB_PASSWORD}
+    depends_on:
+      db: {condition: service_healthy}
+    networks: [private]
+
+  admin:
+    <<: *backend
+    restart: unless-stopped
+    entrypoint: ["gunicorn"]
+    command: ["config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--timeout", "60", "--access-logfile", "-"]
+    environment:
+      <<: *backend-env
+      DJANGO_SETTINGS_MODULE: config.settings.ops
+      DB_USER: yurist_owner  # the admin is an ops tool: it needs the auth/session tables and edits the two lookup tables
+      DB_PASSWORD: ${OWNER_DB_PASSWORD}
+    ports:
+      - "127.0.0.1:${ADMIN_PORT:-8000}:8000"
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/admin/login/', timeout=4)"]
+      interval: 15s
+      timeout: 6s
+      retries: 5
+      start_period: 20s
+    networks: [private, edge]
+
+  # ---- on demand -------------------------------------------------------------------------------------------------
+  # Ingestion and every other `manage.py` job as the least-privilege svc_parser role:
+  #   docker compose run --rm parser ingest_crawl /data
+  parser:
+    <<: *backend
+    profiles: [jobs]
+    environment:
+      <<: *backend-env
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DB_USER: svc_parser
+      DB_PASSWORD: ${PARSER_DB_PASSWORD}
+    volumes:
+      # Read-write mount, read-only use: the archive reader opens state.sqlite3 with mode=ro and never writes, but a
+      # WAL-mode SQLite database cannot be opened at all from a read-only mount that lacks its -shm file.
+      - crawl_data:/data
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+      s3: {condition: service_started}
+    networks: [private]
+
+  # The crawler: the only container on the Internet. Start with `docker compose up -d crawler` (resumable).
+  crawler:
+    build:
+      context: .
+      dockerfile: Dockerfile.crawler
+    image: yurist-crawler:latest
+    profiles: [crawl]
+    restart: "no"
+    command: ["run"]
+    volumes:
+      - crawl_data:/data
+    networks: [public]
+
+  caddy:
+    image: caddy:2.9-alpine
+    profiles: [proxy]
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on: [admin]
+    networks: [edge]
+
+networks:
+  public: {}
+  private:
+    internal: true  # no route to the Internet
+  edge: {}
+
+volumes:
+  pgdata:
+  s3data:
+  crawl_data:
+  caddy_data:

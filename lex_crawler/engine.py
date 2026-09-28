@@ -146,7 +146,7 @@ class Engine:
         folder.mkdir(parents=True,exist_ok=True)
         atomic_write(folder / 'content.html',record.pop('content_html').encode())
         atomic_write(folder / 'text.txt',record.pop('text').encode())
-        record['source_blob'] = str(Path('blobs') / response.digest[:2] / (response.digest+'.gz'))
+        record['source_blob'] = (Path('blobs') / response.digest[:2] / (response.digest+'.gz')).as_posix()  # portable between OSes
         write_json(folder / 'snapshots' / (response.digest+'.json'),record)
         write_json(folder / 'document.json',record)
         for url in record.get('primary_pdf_urls',[]):

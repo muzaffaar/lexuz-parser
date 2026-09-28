@@ -1,0 +1,6 @@
+# Optional TLS front for the admin (profile "proxy"). Caddy obtains and renews the certificate for $DOMAIN itself;
+# ports 80 and 443 must reach this host.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy admin:8000
+}

@@ -1,0 +1,10 @@
+.git
+.venv
+data
+backend
+tests
+*.egg-info
+__pycache__
+*.pyc
+.env
+backups
