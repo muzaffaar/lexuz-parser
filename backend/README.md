@@ -15,6 +15,9 @@ Internet ── lex-crawler (collector, SQLite + files) ──▶ archive folder
 
 ## Run it
 
+Production (Docker, one command to bootstrap): see [`../DEPLOY.md`](../DEPLOY.md). The steps below are the local development flow.
+
+
 ```powershell
 docker compose up -d db                       # pgvector/pgvector:pg17 on localhost:55432 (roles are created by deploy/db/init)
 .venv\Scripts\python.exe manage.py migrate

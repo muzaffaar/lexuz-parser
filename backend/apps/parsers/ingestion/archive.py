@@ -119,7 +119,8 @@ class CrawlArchive:
         return self._edges.get(url, [])
 
     def blob_path(self, relative: str) -> Path:
-        path = (self.root / relative).resolve()
+        # archives written on Windows record 'blobs\ab\<sha>.gz'; a Linux server must read those too
+        path = (self.root / relative.replace("\\", "/")).resolve()
         if self.root not in path.parents:
             raise ArchiveError(f"Blob path escapes the archive: {relative}")
         return path

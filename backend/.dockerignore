@@ -1,0 +1,9 @@
+.venv
+.object-store
+__pycache__
+*.pyc
+tests
+docker-compose.yml
+requirements-dev.txt
+README.md
+staticfiles

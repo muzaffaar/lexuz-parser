@@ -19,3 +19,5 @@ typing-extensions==4.16.0
 tzdata==2026.4
 urllib3==2.8.0
 pypdf==6.19.0
+gunicorn==26.2.0
+whitenoise==6.12.0
