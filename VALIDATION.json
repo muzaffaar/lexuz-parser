@@ -1,0 +1,139 @@
+{
+  "validated_on": "2026-09-26",
+  "python_version": "3.14.7",
+  "automated_tests": {
+    "passed": 24,
+    "failed": 0,
+    "command": "python -m unittest discover -s tests -v"
+  },
+  "live_homepage_scope": {
+    "categories": [
+      "nat",
+      "loc",
+      "int",
+      "tech",
+      "court",
+      "oliy"
+    ],
+    "languages": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "seeds": [
+      "https://lex.uz/search/nat?lang=3",
+      "https://lex.uz/search/nat?lang=1",
+      "https://lex.uz/search/nat?lang=2",
+      "https://lex.uz/search/nat?lang=4",
+      "https://lex.uz/search/loc?lang=3",
+      "https://lex.uz/search/loc?lang=1",
+      "https://lex.uz/search/loc?lang=2",
+      "https://lex.uz/search/loc?lang=4",
+      "https://lex.uz/search/int?lang=3",
+      "https://lex.uz/search/int?lang=1",
+      "https://lex.uz/search/int?lang=2",
+      "https://lex.uz/search/int?lang=4",
+      "https://lex.uz/search/tech?lang=3",
+      "https://lex.uz/search/tech?lang=1",
+      "https://lex.uz/search/tech?lang=2",
+      "https://lex.uz/search/tech?lang=4",
+      "https://lex.uz/search/court?lang=3",
+      "https://lex.uz/search/court?lang=1",
+      "https://lex.uz/search/court?lang=2",
+      "https://lex.uz/search/court?lang=4",
+      "https://lex.uz/search/oliy?lang=3",
+      "https://lex.uz/search/oliy?lang=1",
+      "https://lex.uz/search/oliy?lang=2",
+      "https://lex.uz/search/oliy?lang=4",
+      "https://lex.uz/search/all?lang=1",
+      "https://lex.uz/search/all?lang=2",
+      "https://lex.uz/search/all?lang=3",
+      "https://lex.uz/search/all?lang=4"
+    ]
+  },
+  "live_archive": {
+    "documents_saved": 5,
+    "resource_counts": [
+      {
+        "kind": "asset",
+        "count": 1
+      },
+      {
+        "kind": "document",
+        "count": 5
+      },
+      {
+        "kind": "home",
+        "count": 1
+      },
+      {
+        "kind": "metadata",
+        "count": 31
+      },
+      {
+        "kind": "pdf",
+        "count": 5
+      },
+      {
+        "kind": "pdf_viewer",
+        "count": 5
+      },
+      {
+        "kind": "word",
+        "count": 2
+      }
+    ],
+    "unresolved_failures": [],
+    "intentionally_stopped_with_pending_tasks": true,
+    "pdf_text_review_flags": [
+      {
+        "url": "https://lex.uz/pdffile/8503049",
+        "status": "review_low_text_pages"
+      },
+      {
+        "url": "https://lex.uz/pdffile/8509858",
+        "status": "review_low_text_pages"
+      },
+      {
+        "url": "https://lex.uz/pdffile/8503735",
+        "status": "review_low_text_pages"
+      },
+      {
+        "url": "https://lex.uz/pdffile/8508884",
+        "status": "review_low_text_pages"
+      }
+    ]
+  },
+  "live_search": {
+    "live_resume_search": {
+      "page1_unique_ids": 20,
+      "page2_unique_ids": 40,
+      "used_new_python_session_for_page2": true
+    },
+    "year_partition": {
+      "status": "pending",
+      "total": 968,
+      "children": 0
+    },
+    "live_partition_checks": [
+      {
+        "url": "https://lex.uz/search/nat?lang=3",
+        "status": "split",
+        "reported_total": 28475,
+        "partitions": 61
+      },
+      {
+        "url": "https://lex.uz/search/nat?fyear=2025&lang=3",
+        "status": "split",
+        "reported_total": 1263,
+        "partitions": 12
+      }
+    ]
+  },
+  "integrity_audit": {
+    "checked_response_blobs": 43,
+    "failures": []
+  },
+  "limits": "Bounded live checks only. No complete website mirror was performed. PDF low-text flags require review; OCR is not implemented."
+}

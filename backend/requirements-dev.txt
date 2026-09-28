@@ -1,0 +1,3 @@
+-r requirements.txt
+# test-only: in-process S3 server
+moto[s3,server]==5.2.3

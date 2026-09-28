@@ -1,0 +1,65 @@
+{% extends "admin/base_site.html" %}
+{% load humanize %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Home</a> &rsaquo;
+  <a href="{% url 'admin:statistics_sourcestatisticssnapshot_changelist' %}">Source statistics snapshots</a> &rsaquo; Comparison
+</div>
+{% endblock %}
+{% block extrastyle %}{{ block.super }}
+<style>
+  .cmp table { width: 100%; margin-bottom: 24px; }
+  .cmp td.n, .cmp th.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cmp .bar { display: inline-block; width: 110px; height: 8px; background: var(--hairline-color, #ddd); border-radius: 4px; vertical-align: middle; margin-right: 6px; }
+  .cmp .bar i { display: block; height: 100%; background: var(--primary, #417690); border-radius: 4px; }
+  .cmp .note { color: var(--body-quiet-color, #666); font-size: 12px; }
+  .cmp .warn { background: #fff4d6; color: #5c4400; border: 1px solid #e0c060; padding: 10px 14px; margin-bottom: 16px; }
+  .cmp .big { font-size: 22px; font-weight: 600; }
+  .cmp .kpis { display: flex; gap: 32px; flex-wrap: wrap; margin-bottom: 20px; }
+  .cmp .kpis div span { display: block; font-size: 12px; color: var(--body-quiet-color, #666); }
+  @media (prefers-color-scheme: dark) { .cmp .warn { background: #3a3000; color: #f1d98a; border-color: #7a6400; } }
+</style>
+{% endblock %}
+{% block content %}
+<div id="content-main" class="cmp">
+{% if not comparison %}
+  <p>No lex.uz statistics have been loaded yet. Run <code>python -m lex_crawler stats</code> in the crawler, then
+     <code>python manage.py compare_stats ../data</code> (an ordinary <code>ingest_crawl</code> run also imports it).</p>
+{% else %}
+  {% with c=comparison s=comparison.snapshot o=comparison.overall %}
+  {% if not s.consistent %}
+    <div class="warn"><b>lex.uz's page did not add up when it was read, so its numbers may be wrong:</b>
+      <ul>{% for p in s.problems %}<li>{{ p }}</li>{% endfor %}</ul></div>
+  {% endif %}
+  <div class="kpis">
+    <div><span>lex.uz documents</span><b class="big">{{ o.site|intcomma }}</b></div>
+    {% if c.crawled %}<div><span>Crawled (archive items)</span><b class="big">{{ c.crawled.ours|intcomma }}</b><span>{{ c.crawled.coverage|default_if_none:"0" }}% of lex.uz</span></div>{% endif %}
+    <div><span>Ingested into the database</span><b class="big">{{ o.ours|intcomma }}</b><span>{{ o.coverage|default_if_none:"0" }}% of lex.uz</span></div>
+    <div><span>Still to capture</span><b class="big">{{ o.missing|intcomma }}</b></div>
+  </div>
+  <p class="note">lex.uz numbers as of {{ s.captured_at|date:"Y-m-d H:i" }} UTC (<a href="https://lex.uz/uz/statistic">lex.uz/uz/statistic</a>);
+    ours are counted live now.
+    {% if c.site_change is not None %}Since the previous snapshot lex.uz {% if c.site_change >= 0 %}gained{% else %}lost{% endif %} {{ c.site_change|cut:"-"|intcomma }} documents.{% endif %}</p>
+
+  {% for section in c.sections %}
+  <h2>{{ section.title }}</h2>
+  {% if section.explanation %}<p class="note">{{ section.explanation }}</p>{% endif %}
+  <table>
+    <thead><tr><th></th><th class="n">lex.uz</th><th class="n">Ours</th><th class="n">Missing</th><th>Coverage</th></tr></thead>
+    <tbody>
+    {% for row in section.rows %}
+      <tr>
+        <td>{{ row.label }}{% if row.note %} <span class="note">— {{ row.note }}</span>{% endif %}</td>
+        <td class="n">{% if row.site is None %}–{% else %}{{ row.site|intcomma }}{% endif %}</td>
+        <td class="n">{% if row.ours is None %}–{% else %}{{ row.ours|intcomma }}{% endif %}</td>
+        <td class="n">{% if row.more_than_site %}<span class="note">more than lex.uz</span>{% elif row.missing is None %}–{% else %}{{ row.missing|intcomma }}{% endif %}</td>
+        <td>{% if row.coverage is not None %}<span class="bar"><i style="width: {{ row.coverage|stringformat:'.1f' }}%"></i></span>{{ row.coverage }}%{% else %}–{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+  {% endwith %}
+{% endif %}
+</div>
+{% endblock %}

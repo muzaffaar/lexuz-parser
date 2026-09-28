@@ -1,0 +1,21 @@
+# Pinned per TZ section 7 (no unpinned production dependencies). Python 3.13.x.
+asgiref==3.12.1
+beautifulsoup4==4.15.0
+boto3==1.43.103
+botocore==1.43.103
+Django==5.2.17
+jmespath==1.1.0
+lxml==6.1.3
+numpy==2.5.3
+pgvector==0.4.2
+psycopg[binary]==3.2.13
+psycopg-binary==3.2.13
+python-dateutil==2.9.0.post0
+s3transfer==0.19.2
+six==1.17.0
+soupsieve==2.10
+sqlparse==0.6.0
+typing-extensions==4.16.0
+tzdata==2026.4
+urllib3==2.8.0
+pypdf==6.19.0

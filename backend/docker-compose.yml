@@ -1,0 +1,23 @@
+# Local development / CI database only. Production pins an image digest (TZ section 8).
+# Host port 55432 avoids clashing with any other Postgres on 5432.
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    container_name: yurist-dev-pg
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: yurist
+    ports:
+      - "55432:5432"
+    volumes:
+      - ./deploy/db/init:/docker-entrypoint-initdb.d:ro
+      - yurist_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d yurist"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  yurist_pgdata:
